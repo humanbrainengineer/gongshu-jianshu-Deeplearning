@@ -1,0 +1,727 @@
+前3个PDF---- ：
+
+
+0--
+
+https://www.jianshu.com/u/c15597fddc5f
+
+
+1--
+https://www.jianshu.com/p/91d1aad266df
+
+pip3 install opencv-python
+sudo apt-get install build-essential cmake pkg-config
+sudo apt-get install libjpeg8-dev libtiff5-dev libjasper-dev libpng12-dev
+sudo apt-get install libavcodec-dev libavformat-dev libswscale-dev
+sudo apt-get install libv4l-dev libxvidcore-dev libx264-dev
+sudo apt-get install libgtk-3-dev
+sudo apt-get install libatlas-base-dev gfortran
+sudo apt-get install python3.6-dev
+
+2--
+https://www.jianshu.com/p/86894ccaa407
+
+pip3 install matplotlib pillow lxml
+sudo apt-get install python-lxml python3-lxml
+
+
+$ sudo apt install protobuf-compiler
+$ sudo apt-get install python-tk
+$ sudo apt-get install python3-tk
+
+
+sudo apt-get install git
+git clone https://github.com/tensorflow/models.git
+
+
+in  models/research:
+protoc object_detection/protos/*.proto --python_out=.
+
+
+in object_detection/builders/:
+python/python3 object_detection/builders/model_builder_test.py
+
+https://github.com/tensorflow/models/blob/master/research/object_detection/g3doc/detection_model_zoo.md
+
+
+sudo pip3 install labelImg
+sudo apt-get install pyqt4-dev-tools
+
+##------------------------------------------------------------------------------------------
+
+xml_to_csv.py
+
+
+
+import os
+import glob
+import pandas as pd
+import xml.etree.ElementTree as ET
+
+
+def xml_to_csv(path):
+    xml_list = []
+    for xml_file in glob.glob(path + '/*.xml'):
+        tree = ET.parse(xml_file)
+        root = tree.getroot()
+        for member in root.findall('object'):
+            value = (root.find('filename').text,
+                     int(root.find('size')[0].text),
+                     int(root.find('size')[1].text),
+                     member[0].text,
+                     int(member[4][0].text),
+                     int(member[4][1].text),
+                     int(member[4][2].text),
+                     int(member[4][3].text)
+                     )
+            xml_list.append(value)
+    column_name = ['filename', 'width', 'height', 'class', 'xmin', 'ymin', 'xmax', 'ymax']
+    xml_df = pd.DataFrame(xml_list, columns=column_name)
+    return xml_df
+
+
+def main():
+    image_path = os.path.join(os.getcwd(), 'annotations')
+    xml_df = xml_to_csv(image_path)
+    xml_df.to_csv('road_signs_labels.csv', index=None)
+    print('Successfully converted xml to csv.')
+
+
+if __name__ == '__main__':
+    main()
+
+作者：公输睚信
+链接：https://www.jianshu.com/p/86894ccaa407
+來源：简书
+简书著作权归作者所有，任何形式的转载都请联系作者获得授权并注明出处。
+
+
+
+
+
+##------------------------------------------------------------------------------------------
+
+
+generate_tfrecord.py
+
+
+"""
+Usage:
+  # From tensorflow/models/
+  # Create train data:
+  python/python3 generate_tfrecord.py --csv_input=your path to read train.csv  
+                                      --images_input=your path to read images
+                                      --output_path=your path to write train.record
+                                      --label_map_path=your path to read xxx_label_map.pbtxt
+
+  # Create validation data:
+  python/python3 generate_tfrecord.py --csv_input=you path to read val.csv  
+                                      --images_input=you path to read images
+                                      --output_path=you path to write val.record
+                                      --label_map_path=your path to read xxx_label_map.pbtxt
+"""
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+
+import os
+import io
+import pandas as pd
+import tensorflow as tf
+
+from PIL import Image
+from object_detection.utils import dataset_util
+from object_detection.utils import label_map_util
+from collections import namedtuple
+
+flags = tf.app.flags
+flags.DEFINE_string('csv_input', '', 'Path to the CSV input')
+flags.DEFINE_string('images_input', '', 'Path to the images input')
+flags.DEFINE_string('output_path', '', 'Path to output TFRecord')
+flags.DEFINE_string('label_map_path', '', 'Path to label map proto')
+FLAGS = flags.FLAGS
+
+
+def split(df, group):
+    data = namedtuple('data', ['filename', 'object'])
+    gb = df.groupby(group)
+    return [data(filename, gb.get_group(x)) for filename, x in 
+            zip(gb.groups.keys(), gb.groups)]
+
+
+def create_tf_example(group, label_map_dict, images_path):
+    with tf.gfile.GFile(os.path.join(
+        images_path, '{}'.format(group.filename)), 'rb') as fid:
+        encoded_jpg = fid.read()
+    encoded_jpg_io = io.BytesIO(encoded_jpg)
+    image = Image.open(encoded_jpg_io)
+    width, height = image.size
+
+    filename = group.filename.encode('utf8')
+    image_format = b'jpg'
+    xmins = []
+    xmaxs = []
+    ymins = []
+    ymaxs = []
+    classes_text = []
+    classes = []
+    for index, row in group.object.iterrows():
+        xmins.append(row['xmin'] / width)
+        xmaxs.append(row['xmax'] / width)
+        ymins.append(row['ymin'] / height)
+        ymaxs.append(row['ymax'] / height)
+        classes_text.append(row['class'].encode('utf8'))
+        classes.append(label_map_dict[row['class']])
+
+    tf_example = tf.train.Example(features=tf.train.Features(feature={
+        'image/height': dataset_util.int64_feature(height),
+        'image/width': dataset_util.int64_feature(width),
+        'image/filename': dataset_util.bytes_feature(filename),
+        'image/source_id': dataset_util.bytes_feature(filename),
+        'image/encoded': dataset_util.bytes_feature(encoded_jpg),
+        'image/format': dataset_util.bytes_feature(image_format),
+        'image/object/bbox/xmin': dataset_util.float_list_feature(xmins),
+        'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+        'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+        'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+        'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
+        'image/object/class/label': dataset_util.int64_list_feature(classes),
+    }))
+    return tf_example
+
+
+def main(_):
+    writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
+    label_map_dict = label_map_util.get_label_map_dict(FLAGS.label_map_path)
+    images_path = FLAGS.images_input
+    examples = pd.read_csv(FLAGS.csv_input)
+    grouped = split(examples, 'filename')
+    for group in grouped:
+        tf_example = create_tf_example(group, label_map_dict, images_path)
+        writer.write(tf_example.SerializeToString())
+
+    writer.close()
+    output_path = FLAGS.output_path
+    print('Successfully created the TFRecords: {}'.format(output_path))
+
+
+if __name__ == '__main__':
+    tf.app.run()
+ 
+
+
+#------------------------------------------------------------------------------
+
+
+generate_tfrecord.py               in TensorFlow models/research/object_detection 
+
+$ python3 generate_tfrecord.py --csv_input=/home/.../data/train.csv  
+  --images_input=/home/.../images 
+  --output_path=/home/.../data/train.record 
+  --label_map_path=/home/.../training/xxx_label_map.pbtxt
+ 
+
+#------------------------------------------------------------------------------
+tensorboard --logdir=/home/.../training
+
+
+
+#------------------------------------------------------------------------------
+
+3--
+
+
+pip3 install captcha
+
+#------------------------------------------------------------------------------
+5000images.py
+
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Thu Mar 22 13:43:34 2018
+
+@author: shirhe-lyh
+"""
+
+import cv2
+import numpy as np
+
+from captcha.image import ImageCaptcha
+
+
+def generate_captcha(text='1'):
+    """Generate a digit image."""
+    capt = ImageCaptcha(width=28, height=28, font_sizes=[24])
+    image = capt.generate_image(text)
+    image = np.array(image, dtype=np.uint8)
+    return image
+    
+    
+if __name__ == '__main__':
+    output_dir = './datasets/images/'
+    for i in range(50000):
+        label = np.random.randint(0, 10)
+        image = generate_captcha(str(label))
+        image_name = 'image{}_{}.jpg'.format(i+1, label)
+        output_path = output_dir + image_name
+        cv2.imwrite(output_path, image)
+
+#------------------------------------------------------------------------------
+
+model.py
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar 30 16:54:02 2018
+
+@author: shirhe-lyh
+"""
+
+import tensorflow as tf
+
+from abc import ABCMeta
+from abc import abstractmethod
+
+
+class BaseModel(object):
+    """Abstract base class for any model."""
+    __metaclass__ = ABCMeta
+    
+    def __init__(self, num_classes):
+        """Constructor.
+        
+        Args:
+            num_classes: Number of classes.
+        """
+        self._num_classes = num_classes
+        
+    @property
+    def num_classes(self):
+        return self._num_classes
+    
+    @abstractmethod
+    def preprocess(self, inputs):
+        """Input preprocessing. To be override by implementations.
+        
+        Args:
+            inputs: A float32 tensor with shape [batch_size, height, width,
+                num_channels] representing a batch of images.
+            
+        Returns:
+            preprocessed_inputs: A float32 tensor with shape [batch_size, 
+                height, widht, num_channels] representing a batch of images.
+        """
+        pass
+    
+    @abstractmethod
+    def predict(self, preprocessed_inputs):
+        """Predict prediction tensors from inputs tensor.
+        
+        Outputs of this function can be passed to loss or postprocess functions.
+        
+        Args:
+            preprocessed_inputs: A float32 tensor with shape [batch_size,
+                height, width, num_channels] representing a batch of images.
+            
+        Returns:
+            prediction_dict: A dictionary holding prediction tensors to be
+                passed to the Loss or Postprocess functions.
+        """
+        pass
+    
+    @abstractmethod
+    def postprocess(self, prediction_dict, **params):
+        """Convert predicted output tensors to final forms.
+        
+        Args:
+            prediction_dict: A dictionary holding prediction tensors.
+            **params: Additional keyword arguments for specific implementations
+                of specified models.
+                
+        Returns:
+            A dictionary containing the postprocessed results.
+        """
+        pass
+    
+    @abstractmethod
+    def loss(self, prediction_dict, groundtruth_lists):
+        """Compute scalar loss tensors with respect to provided groundtruth.
+        
+        Args:
+            prediction_dict: A dictionary holding prediction tensors.
+            groundtruth_lists: A list of tensors holding groundtruth
+                information, with one entry for each image in the batch.
+                
+        Returns:
+            A dictionary mapping strings (loss names) to scalar tensors
+                representing loss values.
+        """
+        pass
+    
+        
+class Model(BaseModel):
+    """A simple 10-classification CNN model definition."""
+    
+    def __init__(self,
+                 is_training,
+                 num_classes):
+        """Constructor.
+        
+        Args:
+            is_training: A boolean indicating whether the training version of
+                computation graph should be constructed.
+            num_classes: Number of classes.
+        """
+        super(Model, self).__init__(num_classes=num_classes)
+        
+        self._is_training = is_training
+        
+    def preprocess(self, inputs):
+        """Predict prediction tensors from inputs tensor.
+        
+        Outputs of this function can be passed to loss or postprocess functions.
+        
+        Args:
+            preprocessed_inputs: A float32 tensor with shape [batch_size,
+                height, width, num_channels] representing a batch of images.
+            
+        Returns:
+            prediction_dict: A dictionary holding prediction tensors to be
+                passed to the Loss or Postprocess functions.
+        """
+        preprocessed_inputs = tf.to_float(inputs)
+        preprocessed_inputs = tf.subtract(preprocessed_inputs, 128.0)
+        preprocessed_inputs = tf.div(preprocessed_inputs, 128.0)
+        return preprocessed_inputs
+    
+    def predict(self, preprocessed_inputs):
+        """Predict prediction tensors from inputs tensor.
+        
+        Outputs of this function can be passed to loss or postprocess functions.
+        
+        Args:
+            preprocessed_inputs: A float32 tensor with shape [batch_size,
+                height, width, num_channels] representing a batch of images.
+            
+        Returns:
+            prediction_dict: A dictionary holding prediction tensors to be
+                passed to the Loss or Postprocess functions.
+        """
+        shape = preprocessed_inputs.get_shape().as_list()
+        height, width, num_channels = shape[1:]
+
+        conv1_weights = tf.get_variable(
+            'conv1_weights', shape=[3, 3, num_channels, 32], 
+            dtype=tf.float32)
+        conv1_biases = tf.get_variable(
+            'conv1_biases', shape=[32], dtype=tf.float32)
+        conv2_weights = tf.get_variable(
+            'conv2_weights', shape=[3, 3, 32, 32], dtype=tf.float32)
+        conv2_biases = tf.get_variable(
+            'conv2_biases', shape=[32], dtype=tf.float32)
+        conv3_weights = tf.get_variable(
+            'conv3_weights', shape=[3, 3, 32, 64], dtype=tf.float32)
+        conv3_biases = tf.get_variable(
+            'conv3_biases', shape=[64], dtype=tf.float32)
+        conv4_weights = tf.get_variable(
+            'conv4_weights', shape=[3, 3, 64, 64], dtype=tf.float32)
+        conv4_biases = tf.get_variable(
+            'conv4_biases', shape=[64], dtype=tf.float32)
+        conv5_weights = tf.get_variable(
+            'conv5_weights', shape=[3, 3, 64, 128], dtype=tf.float32)
+        conv5_biases = tf.get_variable(
+            'conv5_biases', shape=[128], dtype=tf.float32)
+        conv6_weights = tf.get_variable(
+            'conv6_weights', shape=[3, 3, 128, 128], dtype=tf.float32)
+        conv6_biases = tf.get_variable(
+            'conv6_biases', shape=[128], dtype=tf.float32)
+            
+        flat_height = height // 4
+        flat_width = width // 4
+        flat_size = flat_height * flat_width * 128
+        
+        fc7_weights = tf.get_variable(
+            'fc7_weights', shape=[flat_size, 512], dtype=tf.float32)
+        fc7_biases = tf.get_variable(
+            'f7_biases', shape=[512], dtype=tf.float32)
+        fc8_weights = tf.get_variable(
+            'fc8_weights', shape=[512, 512], dtype=tf.float32)
+        fc8_biases = tf.get_variable(
+            'f8_biases', shape=[512], dtype=tf.float32)
+        fc9_weights = tf.get_variable(
+            'fc9_weights', shape=[512, self.num_classes], dtype=tf.float32)
+        fc9_biases = tf.get_variable(
+            'f9_biases', shape=[self.num_classes], dtype=tf.float32)
+        
+        net = preprocessed_inputs
+        net = tf.nn.conv2d(net, conv1_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv1_biases))
+        net = tf.nn.conv2d(net, conv2_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv2_biases))
+        net = tf.nn.max_pool(net, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                             padding='SAME')
+        net = tf.nn.conv2d(net, conv3_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv3_biases))
+        net = tf.nn.conv2d(net, conv4_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv4_biases))
+        net = tf.nn.max_pool(net, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                             padding='SAME')
+        net = tf.nn.conv2d(net, conv5_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv5_biases))
+        net = tf.nn.conv2d(net, conv6_weights, strides=[1, 1, 1, 1],
+                           padding='SAME')
+        net = tf.nn.relu(tf.nn.bias_add(net, conv6_biases))
+        net = tf.reshape(net, shape=[-1, flat_size])
+        net = tf.nn.relu(tf.add(tf.matmul(net, fc7_weights), fc7_biases))
+        net = tf.nn.relu(tf.add(tf.matmul(net, fc8_weights), fc8_biases))
+        net = tf.add(tf.matmul(net, fc9_weights), fc9_biases)
+        prediction_dict = {'logits': net}
+        return prediction_dict
+    
+    def postprocess(self, prediction_dict):
+        """Convert predicted output tensors to final forms.
+        
+        Args:
+            prediction_dict: A dictionary holding prediction tensors.
+            **params: Additional keyword arguments for specific implementations
+                of specified models.
+                
+        Returns:
+            A dictionary containing the postprocessed results.
+        """
+        logits = prediction_dict['logits']
+        logits = tf.nn.softmax(logits)
+        classes = tf.cast(tf.argmax(logits, axis=1), dtype=tf.int32)
+        postprecessed_dict = {'classes': classes}
+        return postprecessed_dict
+    
+    def loss(self, prediction_dict, groundtruth_lists):
+        """Compute scalar loss tensors with respect to provided groundtruth.
+        
+        Args:
+            prediction_dict: A dictionary holding prediction tensors.
+            groundtruth_lists: A list of tensors holding groundtruth
+                information, with one entry for each image in the batch.
+                
+        Returns:
+            A dictionary mapping strings (loss names) to scalar tensors
+                representing loss values.
+        """
+        logits = prediction_dict['logits']
+        loss = tf.reduce_mean(
+            tf.nn.sparse_softmax_cross_entropy_with_logits(
+                logits=logits, labels=groundtruth_lists))
+        loss_dict = {'loss': loss}
+        return loss_dict
+
+ #----------------------------------------------------------------------------
+ 
+ train.py
+ 
+ #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Fri Mar 30 19:27:44 2018
+
+@author: shirhe-lyh
+"""
+
+"""Train a CNN model to classifying 10 digits.
+
+Example Usage:
+---------------
+python3 train.py \
+    --images_path: Path to the training images (directory).
+    --model_output_path: Path to model.ckpt.
+"""
+
+import cv2
+import glob
+import numpy as np
+import os
+import tensorflow as tf
+
+import model
+
+flags = tf.app.flags
+
+flags.DEFINE_string('images_path', None, 'Path to training images.')
+flags.DEFINE_string('model_output_path', None, 'Path to model checkpoint.')
+FLAGS = flags.FLAGS
+
+
+def get_train_data(images_path):
+    """Get the training images from images_path.
+    
+    Args: 
+        images_path: Path to trianing images.
+        
+    Returns:
+        images: A list of images.
+        lables: A list of integers representing the classes of images.
+        
+    Raises:
+        ValueError: If images_path is not exist.
+    """
+    if not os.path.exists(images_path):
+        raise ValueError('images_path is not exist.')
+        
+    images = []
+    labels = []
+    images_path = os.path.join(images_path, '*.jpg')
+    count = 0
+    for image_file in glob.glob(images_path):
+        count += 1
+        if count % 100 == 0:
+            print('Load {} images.'.format(count))
+        image = cv2.imread(image_file)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # Assume the name of each image is imagexxx_label.jpg
+        label = int(image_file.split('_')[-1].split('.')[0])
+        images.append(image)
+        labels.append(label)
+    images = np.array(images)
+    labels = np.array(labels)
+    return images, labels
+
+
+def next_batch_set(images, labels, batch_size=128):
+    """Generate a batch training data.
+    
+    Args:
+        images: A 4-D array representing the training images.
+        labels: A 1-D array representing the classes of images.
+        batch_size: An integer.
+        
+    Return:
+        batch_images: A batch of images.
+        batch_labels: A batch of labels.
+    """
+    indices = np.random.choice(len(images), batch_size)
+    batch_images = images[indices]
+    batch_labels = labels[indices]
+    return batch_images, batch_labels
+
+
+def main(_):
+    inputs = tf.placeholder(tf.float32, shape=[None, 28, 28, 3], name='inputs')
+    labels = tf.placeholder(tf.int32, shape=[None], name='labels')
+    
+    cls_model = model.Model(is_training=True, num_classes=10)
+    preprocessed_inputs = cls_model.preprocess(inputs)
+    prediction_dict = cls_model.predict(preprocessed_inputs)
+    loss_dict = cls_model.loss(prediction_dict, labels)
+    loss = loss_dict['loss']
+    postprocessed_dict = cls_model.postprocess(prediction_dict)
+    classes = postprocessed_dict['classes']
+    classes_ = tf.identity(classes, name='classes')
+    acc = tf.reduce_mean(tf.cast(tf.equal(classes, labels), 'float'))
+    
+    global_step = tf.Variable(0, trainable=False)
+    learning_rate = tf.train.exponential_decay(0.1, global_step, 150, 0.9)
+    
+    optimizer = tf.train.MomentumOptimizer(learning_rate, 0.9)
+    train_step = optimizer.minimize(loss, global_step)
+    
+    saver = tf.train.Saver()
+    
+    images, targets = get_train_data(FLAGS.images_path)
+    
+    init = tf.global_variables_initializer()
+    
+    with tf.Session() as sess:
+        sess.run(init)
+        
+        for i in range(6000):
+            batch_images, batch_labels = next_batch_set(images, targets)
+            train_dict = {inputs: batch_images, labels: batch_labels}
+            
+            sess.run(train_step, feed_dict=train_dict)
+            
+            loss_, acc_ = sess.run([loss, acc], feed_dict=train_dict)
+            
+            train_text = 'step: {}, loss: {}, acc: {}'.format(
+                i+1, loss_, acc_)
+            print(train_text)
+            
+        saver.save(sess, FLAGS.model_output_path)
+        
+    
+if __name__ == '__main__':
+    tf.app.run()
+ 
+#---------------------------------------------------------------------------
+
+python3.6 train.py --images_path /home/.../datasets/images \
+                 --model_output_path /home/.../model.ckpt
+                 
+                 
+#---------------------------------------------------------------------------
+
+
+
+
+evaluate.py
+
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Mon Apr  2 14:02:05 2018
+
+@author: shirhe-lyh
+"""
+
+import numpy as np
+import tensorflow as tf
+
+from captcha.image import ImageCaptcha
+
+flags = tf.app.flags
+flags.DEFINE_string('model_ckpt_path', None, 'Path to model checkpoint.')
+FLAGS = flags.FLAGS
+
+
+def generate_captcha(text='1'):
+     """Generate a digit image."""
+    capt = ImageCaptcha(width=28, height=28, font_sizes=[24])
+    image = capt.generate_image(text)
+    image = np.array(image, dtype=np.uint8)
+    return image
+
+
+def main(_):
+    with tf.Session() as sess:
+        ckpt_path = FLAGS.model_ckpt_path
+        saver = tf.train.import_meta_graph(ckpt_path + '.meta')
+        saver.restore(sess, ckpt_path)
+        inputs = tf.get_default_graph().get_tensor_by_name('inputs:0')
+        classes = tf.get_default_graph().get_tensor_by_name('classes:0')
+        
+        for i in range(10):
+            label = np.random.randint(0, 10)
+            image = generate_captcha(str(label))
+            image_np = np.expand_dims(image, axis=0)
+            predicted_label = sess.run(classes, 
+                                       feed_dict={inputs: image_np})
+            print(predicted_label, ' vs ', label)
+            
+            
+if __name__ == '__main__':
+    tf.app.run()
+
+ #---------------------------------------------------------------------------
+ 
+ 
+ python3 evaluate.py --model_ckpt_path /home/.../model.ckpt
+ 
+ 
+  #---------------------------------------------------------------------------
