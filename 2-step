@@ -47,8 +47,13 @@ python3.6 generate_tfrecordc6.py --images_path '/home/eth/PycharmProjects/untitl
 #---------------------------------------------------------------------
 
 
-第七章：  TensorFlow-slim 训练 CNN 分类模型（续）
+第七章：  TensorFlow-slim 训练 CNN 分类模型（续）------------  真正的开始是从这一章，因为是 slim 添加cnn 架构。而且是读取  tfrecord的文件。
 
+# 在 trainc7.py  的slim.learning.train  里 添加 number_of_steps=1 .
 
+ python3.6 trainc7.py --record_path /home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/c6-tfrecord/trainc6.record --logdir /home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/modelc7-ckpt/
+
+# 使用 tensorboard 和 上个命令最后的  目录是一致的。
+  tensorboard --logdir '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/modelc7-ckpt' 
 
 
