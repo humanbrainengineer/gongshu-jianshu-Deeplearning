@@ -2,7 +2,10 @@
 
 
 第八章（8 pdf）：
+step 0：
 
+
+编辑exporterc8.py
 
 step1：
 trained_checkpoint_prefix 指定的是一个  文件集合：model.ckpt-0，， 不是目录。那三个文件相同部分。
