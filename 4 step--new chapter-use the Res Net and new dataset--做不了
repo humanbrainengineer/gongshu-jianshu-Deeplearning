@@ -1,0 +1,38 @@
+
+从第九章---No.9 pdf 开始
+
+
+
+预训练模型的下载地址为 ：
+
+https://github.com/tensorflow/models/tree/master/research/slim
+
+所有代码见：
+https://github.com/Shirhe-Lyh/finetune_classification
+
+
+
+step 1:
+
+复制黏贴代码---》  modelc9.py
+
+
+step 2:
+
+
+复制黏贴代码---》  trainc9.py
+
+
+step 3：
+
+因为数据集下载不了。
+
+$ python3 generate_tfrecord.py \
+    --images_dir Path/to/AgriculturalDisease_trainingset/images \
+    --annotation_path Path/to/AgriculturalDisease_train_annotations.json \   # 这个参数没有！！！因为数据集下载不了。
+    --output_path Path/to/train.record
+ 
+
+step 4： 使用之前产生的  .record文件也不行、必须要  json 文件。
+
+###########  已经停止，该第九章项目，除非  找到数据集 并且包含  json 文件。 ########## ！！！！！！！！！！！！！！！！！！！！
