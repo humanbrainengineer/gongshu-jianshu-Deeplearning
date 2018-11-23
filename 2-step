@@ -1,3 +1,27 @@
 1，  第四个pdf 是全新，代码不和 第三个pdf重复。
 
 pdf4-TensorFlow 模型保存与恢复
+
+
+复制 5---TensorFlow-slim xunlian CNN 分类模型.pdf  里的代码
+
+
+最终实行：
+
+
+python3.6 trainc5.py --images_path /home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/5000images/ --model_output_path /home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/modelc5-ckpt/modelc5.ckpt
+
+python3.6 evaluatec5.py --model_ckpt_path '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/modelc5-ckpt/modelc5.ckpt'
+
+
+/job:localhost/replica:0/task:0/device:GPU:0 with 10278 MB memory) -> physical GPU (device: 0, name: GeForce GTX 1080 Ti, pci bus id: 0000:01:00.0, compute capability: 6.1)
+[9]  vs  9
+[3]  vs  3
+[9]  vs  9
+[7]  vs  7
+[4]  vs  4
+[9]  vs  9
+[3]  vs  3
+[4]  vs  4
+[7]  vs  7
+[1]  vs  1
