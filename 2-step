@@ -41,8 +41,13 @@ python3.6 generate_tfrecordc6.py --images_path '/home/eth/PycharmProjects/untitl
 
 
 
-二、读取 .record 文件
+二、读取 .record 文件  （这里的代码从第七章 开始--出现在第七章里）
 
+
+#---------------------------------------------------------------------
+
+
+第七章：  TensorFlow-slim 训练 CNN 分类模型（续）
 
 
 
