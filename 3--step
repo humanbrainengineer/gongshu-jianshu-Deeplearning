@@ -3,3 +3,48 @@
 
 第八章（8 pdf）：
 
+
+step1：
+trained_checkpoint_prefix 指定的是一个  文件集合：model.ckpt-0，， 不是目录。那三个文件相同部分。
+
+#python3.6 export_inference_graphc8.py --input_type image_tensor --trained_checkpoint_prefix '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/modelc7-ckpt/model.ckpt-0' --output_directory '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/output_directoryc8/'
+  
+OKay!!!!
+  
+  
+  
+  
+  
+  
+  
+step2:
+
+ python3.6 evaluatec8.py --frozen_graph_path /home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/output_directoryc8/frozen_inference_graph.pb
+
+ 可是：显示版本过高。
+  
+  ##------------------------------------------------------------------------------------
+  CuDNN library compatibility error after loading model weights
+服务器环境
+错误
+原因
+解决方案
+服务器环境
+Ubuntu16.04、cuda9.0、cudnn7.0、tensorflow1.12.0、python3.5、1080ti
+
+错误
+Failed to get convolution algorithm. cudnn failed to initialize…
+
+原因
+tensorflow版本太高
+
+解决方案
+sudo pip3 install --upgrade --force-reinstall tensorflow-gpu==1.9.0 --user
+--------------------- 
+作者：MarcusPlus 
+来源：CSDN 
+原文：https://blog.csdn.net/Allen__Iverson/article/details/84038113 
+版权声明：本文为博主原创文章，转载请附上博文链接！
+
+
+  ##------------------------------------------------------------------------------------
