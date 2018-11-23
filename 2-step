@@ -1,4 +1,4 @@
-1，  第四个pdf 是全新，代码不和 第三个pdf重复。
+第五章，  第四个pdf 是全新，代码不和 第三个pdf重复。
 
 pdf4-TensorFlow 模型保存与恢复
 
@@ -25,3 +25,25 @@ python3.6 evaluatec5.py --model_ckpt_path '/home/eth/PycharmProjects/untitled/sl
 [4]  vs  4
 [7]  vs  7
 [1]  vs  1
+
+
+
+#--------------------------------------------------------------------
+
+
+第六章，  TensorFlow 自定义生成 .record 文件
+
+
+一、生成 .record 文件
+
+python3.6 generate_tfrecordc6.py --images_path '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/5000images/' --output_path '/home/eth/PycharmProjects/untitled/slim_cnn_test-master/images/c6-tfrecord/trainc6.record'
+
+
+
+
+二、读取 .record 文件
+
+
+
+
+
