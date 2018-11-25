@@ -1,0 +1,19 @@
+第11章：  训练多任务多标签模型
+  
+  732  cd /home/eth/PycharmProjects/untitled/multi_task_test-master/
+  733  ls
+  734  chmod 777 *
+  735  ls
+  736  python3.6 '/home/eth/PycharmProjects/untitled/multi_task_test-master/generate_train_data.py' ./images/
+  737  ls
+  738  python3.6 generate_tfrecord.py --images_path ./datasets/images/ --output_path ./datasets/train.record
+  739  ls
+  740  python3.6 train.py --record_path ./datasets/train.record --logdir ./training/
+  741  ls -la
+ 
+  743  python3.6 export_inference_graph.py --trained_checkpoint_prefix ./training/model.ckpt-9620 --output_directory ./exported_model_directory/
+  744  ls -la
+
+  747  python3.6 evaluate.py --frozen_graph_path '/home/eth/PycharmProjects/untitled/multi_task_test-master/exported_model_directory/frozen_inference_graph.pb' 
+
+result： OK！
