@@ -8,6 +8,9 @@
   737  ls
   738  python3.6 generate_tfrecord.py --images_path ./datasets/images/ --output_path ./datasets/train.record
   739  ls
+  
+  以下的train.py 是包含 了  model.py的。
+  
   740  python3.6 train.py --record_path ./datasets/train.record --logdir ./training/
   741  ls -la
  
